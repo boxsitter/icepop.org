@@ -1,0 +1,119 @@
+/* Shared base + components for icepop.org. Depends on tokens.css (load that
+   first). Everything here is used by the homepage and by every tool; anything
+   tool-specific belongs in that tool's own stylesheet. */
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: var(--font-sans);
+  background: var(--color-bg);
+  color: var(--color-text);
+  margin: 0;
+  padding: var(--space-6) var(--space-4);
+}
+
+main {
+  max-width: var(--content-width);
+  margin: 0 auto;
+}
+
+h1 {
+  margin: 0 0 var(--space-1);
+}
+
+.subtitle {
+  margin-top: 0;
+  color: var(--color-muted);
+}
+
+a {
+  color: var(--color-accent);
+}
+
+a:hover {
+  color: var(--color-accent-hover);
+}
+
+code {
+  background: var(--color-surface-code);
+  padding: 0.1em 0.35em;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+}
+
+pre {
+  background: var(--color-surface-soft);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius);
+  padding: var(--space-3);
+  max-height: 420px;
+  overflow: auto;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  margin: 0;
+}
+
+.muted {
+  color: var(--color-muted-soft);
+}
+
+/* Panels — the standard bordered content card used across tools. */
+.panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-5);
+  margin-top: var(--space-4);
+}
+
+.panel h2 {
+  margin: 0 0 var(--space-2);
+  font-size: 1.1rem;
+}
+
+/* Buttons — keep any element's id/data hooks for JS; these classes carry the
+   look. .btn-primary = filled accent, .btn-secondary = outline. */
+.btn {
+  font-size: 0.9rem;
+  border-radius: var(--radius);
+  cursor: pointer;
+  padding: 0.35rem 0.9rem;
+  border: 1px solid transparent;
+}
+
+.btn-primary {
+  padding: var(--space-2) var(--space-5);
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.btn-primary:not(:disabled):hover {
+  background: var(--color-accent-hover);
+  border-color: var(--color-accent-hover);
+}
+
+.btn-primary:disabled {
+  background: #bbb;
+  border-color: #bbb;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: var(--color-surface);
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--color-accent-soft);
+}
+
+.btn-secondary:disabled {
+  color: #bbb;
+  border-color: #ccc;
+  cursor: not-allowed;
+}

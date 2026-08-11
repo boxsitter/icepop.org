@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lantern Counter</title>
+<link rel="stylesheet" href="../../assets/css/tokens.css">
+<link rel="stylesheet" href="../../assets/css/base.css">
+<link rel="stylesheet" href="lantern.css">
+</head>
+<body>
+<main>
+  <p class="back-link"><a href="../../">← All tools</a></p>
+  <h1>Lantern Counter</h1>
+  <p class="subtitle">
+    Upload a roster CSV with a <code>ReservationHistory</code> column (export for Excel in UltraCamp). This tool counts each
+    camper's distinct valid summers and adds a <code>LanternYears</code> column.
+  </p>
+
+  <section class="panel">
+    <label class="file-label" for="csvFile">Choose roster CSV</label>
+    <div class="file-row">
+      <input type="file" id="csvFile" accept=".csv,text/csv">
+      <button id="clearBtn" class="btn btn-secondary" type="button" disabled>Clear</button>
+    </div>
+  </section>
+
+  <section class="panel" id="summaryPanel" hidden>
+    <h2>Summary</h2>
+    <div id="summary"></div>
+    <button id="downloadBtn" class="btn btn-primary" type="button" disabled>Download result CSV</button>
+  </section>
+
+  <section class="panel" id="warningsPanel" hidden>
+    <h2>Format warnings</h2>
+    <p>This file doesn't fully match the export format the tool was built for.
+       <strong>Counts may be inaccurate</strong> — spot-check them before trusting the results.</p>
+    <div id="warnings"></div>
+  </section>
+
+  <section class="panel" id="resultsPanel" hidden>
+    <div class="results-header">
+      <h2>Results</h2>
+      <button id="fullscreenBtn" class="btn btn-secondary" type="button">Fullscreen</button>
+    </div>
+    <div class="results-controls">
+      <input type="search" id="searchBox" placeholder="Search campers…" autocomplete="off">
+      <label class="lanterns-only"><input type="checkbox" id="lanternsOnly"> Lanterns only</label>
+      <button id="yearsFilterChip" type="button" class="filter-chip" title="Clear filter" hidden></button>
+      <div class="sort-toggle" role="group" aria-label="Sort by">
+        <span class="muted">Sort:</span>
+        <button id="sortByRow" type="button" class="active">Original order</button>
+        <button id="sortByName" type="button">Last name</button>
+        <button id="sortByYears" type="button">Lantern years</button>
+      </div>
+    </div>
+    <p id="resultsCount" class="muted"></p>
+    <div id="resultsList"></div>
+    <div id="resizeHandle" class="resize-handle" title="Drag to resize"></div>
+  </section>
+
+  <section class="panel" id="reviewPanel" hidden>
+    <h2>⚠ Needs manual review</h2>
+    <p>These session titles didn't match any known pattern and were <strong>not counted</strong>:</p>
+    <pre id="reviewLog"></pre>
+  </section>
+
+  <section class="panel" id="logPanel" hidden>
+    <div class="log-header">
+      <h2>Log</h2>
+      <button id="logToggleBtn" class="btn btn-secondary" type="button">Show log</button>
+    </div>
+    <pre id="log" hidden></pre>
+  </section>
+</main>
+<script type="module" src="app.js"></script>
+</body>
+</html>

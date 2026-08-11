@@ -1,0 +1,60 @@
+/* Design tokens for icepop.org — the single source of truth for the site's
+   look. Every tool pulls these in; no tool should hardcode a hex value.
+   Palette is the warm/craft camp look carried over from the lantern counter. */
+
+:root {
+  /* Surfaces & text */
+  --color-bg: #f4f1ea;          /* page background (cream) */
+  --color-surface: #fff;        /* panels, cards */
+  --color-surface-soft: #faf8f2;/* inset areas: stat tiles, pre blocks */
+  --color-surface-code: #e8e3d8;/* inline code background */
+  --color-text: #2b2b2b;
+  --color-muted: #555;          /* secondary text */
+  --color-muted-soft: #777;     /* tertiary text, ticks */
+  --color-faint: #999;          /* axis labels, disabled hints */
+
+  /* Borders */
+  --color-border: #ddd6c7;      /* panel/card borders */
+  --color-border-soft: #e5dfd0; /* softer inset borders */
+  --color-border-input: #ccc4b2;/* form controls */
+
+  /* Accent (burnt orange) */
+  --color-accent: #b05a1e;
+  --color-accent-hover: #93490f;
+  --color-accent-soft: #fdf1e6; /* accent button hover wash */
+  --color-accent-muted: #948a72;/* de-emphasized bars/swatches */
+
+  /* Status */
+  --color-success: #2c6e2c;
+  --color-success-bg: #e9f3e9;
+  --color-warn: #8a5a00;
+  --color-warn-bg: #fdf6e3;
+  --color-warn-border: #e0b13c;
+  --color-error: #a01818;
+  --color-error-bg: #fdeeee;
+  --color-error-border: #c94f4f;
+
+  /* Highlight */
+  --color-lantern-bg: #fff0cc;  /* lantern row highlight */
+
+  /* Typography */
+  --font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, Consolas, monospace;
+
+  /* Spacing scale */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 2rem;
+
+  /* Radius */
+  --radius-sm: 4px;
+  --radius: 6px;
+  --radius-lg: 8px;
+  --radius-pill: 999px;
+
+  /* Layout */
+  --content-width: 900px;
+}

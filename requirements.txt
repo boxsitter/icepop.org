@@ -1,0 +1,12 @@
+# Python dependencies
+#
+# This file should contain pinned (exact) versions for reproducibility.
+# Generate or update it after installing packages:
+#
+#   pip install <package>
+#   pip freeze > requirements.txt
+#
+# Example pinned entries:
+#   fastapi==0.115.0
+#   uvicorn==0.30.6
+#   sqlalchemy==2.0.35

@@ -502,3 +502,94 @@ details.camper.lantern .result-badge {
   margin: 0 0 0.4rem;
   font-weight: 600;
 }
+
+.summary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+/* Lantern roster print-out. Hidden on screen; when the print dialog opens we
+   hide the whole app UI and show only this, cleanly formatted for paper. */
+.print-roster {
+  display: none;
+}
+
+@media print {
+  /* Consistent physical margins on EVERY page (container padding would only
+     inset the first page's top and last page's bottom). */
+  @page {
+    margin: 1.5cm;
+  }
+
+  body > *:not(.print-roster) { display: none !important; }
+
+  body {
+    background: #fff;
+    color: #000;
+    margin: 0;
+    padding: 0;
+  }
+
+  .print-roster {
+    display: block;
+    font-family: var(--font-sans);
+    color: #000;
+  }
+
+  .print-header {
+    margin-bottom: 1.1rem;
+    padding-bottom: 0.6rem;
+    border-bottom: 2px solid #000;
+    break-after: avoid; /* keep the title with the start of the table */
+  }
+
+  .print-title {
+    margin: 0;
+    font-size: 1.7rem;
+    letter-spacing: 0.01em;
+  }
+
+  .print-meta {
+    margin: 0.35rem 0 0;
+    font-size: 0.85rem;
+    color: #444;
+  }
+
+  .print-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+  }
+
+  .print-table thead {
+    display: table-header-group; /* repeat header if the roster spans pages */
+  }
+
+  .print-table th {
+    text-align: left;
+    padding: 0 0.6rem 0.4rem;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #333;
+    border-bottom: 1.5px solid #000;
+  }
+
+  .print-table td {
+    padding: 0.4rem 0.6rem;
+    border-bottom: 1px solid #ccc;
+  }
+
+  .print-table tbody tr {
+    page-break-inside: avoid; /* legacy */
+    break-inside: avoid;      /* modern */
+  }
+
+  .print-table .col-years {
+    text-align: right;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+}

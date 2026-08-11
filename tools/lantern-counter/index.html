@@ -28,7 +28,10 @@
   <section class="panel" id="summaryPanel" hidden>
     <h2>Summary</h2>
     <div id="summary"></div>
-    <button id="downloadBtn" class="btn btn-primary" type="button" disabled>Download result CSV</button>
+    <div class="summary-actions">
+      <button id="downloadBtn" class="btn btn-primary" type="button" disabled>Download result CSV</button>
+      <button id="printRosterBtn" class="btn btn-primary" type="button" disabled>Print lantern roster</button>
+    </div>
   </section>
 
   <section class="panel" id="warningsPanel" hidden>
@@ -73,6 +76,11 @@
     <pre id="log" hidden></pre>
   </section>
 </main>
+
+<!-- Print-only: a clean lantern roster. Hidden on screen; @media print in
+     lantern.css hides the app UI and shows just this. Populated on demand. -->
+<div id="printRoster" class="print-roster" aria-hidden="true"></div>
+
 <script type="module" src="app.js"></script>
 </body>
 </html>

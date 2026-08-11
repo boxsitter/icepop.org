@@ -1,311 +1,10 @@
 'use strict';
 
-// Lantern Counter — counts distinct valid summers per camper from the
-// ReservationHistory column of a roster export. Rules: see RULES.md.
+// UI for the Lantern Counter: file input, summary/results rendering, search
+// and sort, CSV download, and the print roster. Counting lives in lantern-rules.js.
 
-// Generic CSV helpers live in the shared module (used across tools).
-import { parseCSV, toCSV } from '../../assets/js/csv.js';
-
-// Exclusions run first (order per RULES.md), so "Family Camp - Session F"
-// is rejected even though it carries a lettered session code.
-const EXCLUDE_RULES = [
-  ['family camp', /family camp|exceptional families|families weekend/i],
-  ['Camp Orkila', /orkila/i],
-  ['BOLD/GOLD trip', /\bbold\b|\bgold\b/i],
-  ['day camp', /\bweek\s*\d|\(day camp\)/i],
-  ['event / non-session', /open house|orientation|values awards|yesc|cabin rental|first-?time camper|wellness weekend/i],
-  // "Holdover Night for Sessions F-G" — a between-session stay, not a session.
-  ['holdover', /holdover/i],
-  // "- " keeps this from matching the valid "All Gender Mini Camp"
-  ['All Gender expedition', /all gender - /i],
-  ['numbered session (Orkila)', /session\s+\d+[a-z]?\b/i],
-];
-
-const INCLUDE_RULES = [
-  ['lettered session', /session\s+[a-h]{1,2}\d?\b/i],
-  ['Mini Session', /mini session/i],
-  // "Session I - Mini Camp": Mini Camp is valid even when the session letter
-  // falls outside A-H, so match the program name directly.
-  ['Mini Camp', /mini camp/i],
-  ['legacy bare-letter title', /^[a-h]\d? - /i],
-];
-
-// -> { verdict: 'valid' | 'excluded' | 'review', reason }
-function classifyTitle(title) {
-  for (const [reason, re] of EXCLUDE_RULES) {
-    if (re.test(title)) return { verdict: 'excluded', reason };
-  }
-  for (const [reason, re] of INCLUDE_RULES) {
-    if (re.test(title)) return { verdict: 'valid', reason };
-  }
-  return { verdict: 'review', reason: 'unrecognized title' };
-}
-
-// "7/6/2025 2025 CAMP - Session A - ..." — the year that counts is the
-// date's year; older titles have no year prefix. Two date formats appear in
-// exports: legacy US "M/D/YYYY" and newer ISO "YYYY-MM-DD"; support both.
-const LINE_RE = /^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(.+)$/;
-const LINE_RE_ISO = /^(\d{4})-(\d{1,2})-(\d{1,2})\s+(.+)$/;
-
-// Titles like "2025 CAMP - ..." start with a year; it should always equal
-// the date's year. A mismatch means the export format drifted.
-const TITLE_YEAR_RE = /^((?:19|20)\d{2})\b/;
-
-// Count distinct calendar years with at least one valid registration.
-function processHistory(history) {
-  const years = new Set();
-  const entries = [];
-  const unparsed = [];
-  const reviews = [];
-  const yearMismatches = [];
-  const implausibleYears = [];
-  const maxPlausibleYear = new Date().getFullYear() + 1;
-
-  for (const rawLine of String(history ?? '').split(/\r?\n/)) {
-    const line = rawLine.trim();
-    if (!line) continue;
-    // Try US "M/D/YYYY" first, then ISO "YYYY-MM-DD"; the two swap the
-    // year/month/day capture order, so read them from the right groups.
-    const mUS = LINE_RE.exec(line);
-    const mISO = mUS ? null : LINE_RE_ISO.exec(line);
-    const m = mUS || mISO;
-    if (!m) { unparsed.push(line); continue; }
-    const month = Number(mUS ? m[1] : m[2]);
-    const day = Number(mUS ? m[2] : m[3]);
-    const year = Number(mUS ? m[3] : m[1]);
-    const title = m[4].trim();
-
-    const titleYear = TITLE_YEAR_RE.exec(title);
-    if (titleYear && Number(titleYear[1]) !== year) yearMismatches.push(line);
-    if (year < 1990 || year > maxPlausibleYear) implausibleYears.push(line);
-
-    const { verdict, reason } = classifyTitle(title);
-    entries.push({ year, month, day, title, verdict, reason });
-    if (verdict === 'valid') years.add(year);
-    if (verdict === 'review') reviews.push(title);
-  }
-
-  // Only one registration per summer counts (RULES.md): the earliest-dated
-  // valid one. Tag it on each entry so the UI can show which registration
-  // in a multi-session summer is the one actually contributing to the count.
-  const earliestValidByYear = new Map();
-  for (const e of entries) {
-    if (e.verdict !== 'valid') continue;
-    const cur = earliestValidByYear.get(e.year);
-    if (!cur || e.month < cur.month || (e.month === cur.month && e.day < cur.day)) {
-      earliestValidByYear.set(e.year, e);
-    }
-  }
-  for (const e of earliestValidByYear.values()) e.counted = true;
-
-  return {
-    count: years.size, years: [...years].sort(), entries, unparsed, reviews,
-    yearMismatches, implausibleYears,
-  };
-}
-
-const LANTERN_THRESHOLD = 5;
-
-function findColumn(header, name) {
-  return header.findIndex(h => h.toLowerCase() === name.toLowerCase());
-}
-
-function processRoster(text) {
-  const rows = parseCSV(text);
-  if (rows.length === 0) {
-    throw new Error('The file is empty. Make sure you exported the roster as a CSV.');
-  }
-  if (rows.length === 1) {
-    throw new Error('The file only contains a header row — no camper rows found.');
-  }
-
-  const header = rows[0].map(h => h.replace(/^﻿/, '').trim());
-  const colIdx = findColumn(header, 'ReservationHistory');
-  if (colIdx === -1) {
-    throw new Error(
-      'No "ReservationHistory" column found — this doesn\'t look like the right export. ' +
-      'Columns present: ' + (header.filter(Boolean).join(', ') || '(none)')
-    );
-  }
-
-  // Name columns are optional; results and search degrade gracefully without them.
-  const firstIdx = findColumn(header, 'nameFirst');
-  const lastIdx = findColumn(header, 'nameLast');
-  const hasNames = firstIdx !== -1 || lastIdx !== -1;
-
-  const log = [];
-  log.push(['info', `Parsed ${rows.length - 1} camper row${rows.length === 2 ? '' : 's'} (${header.length} column${header.length === 1 ? '' : 's'}).`]);
-  log.push(['info', `Found "ReservationHistory" (column ${colIdx + 1}).`]);
-  log.push(hasNames
-    ? ['info', 'Name columns: ' + [firstIdx !== -1 && 'nameFirst', lastIdx !== -1 && 'nameLast'].filter(Boolean).join(', ') + '.']
-    : ['warn', 'No nameFirst/nameLast columns — campers listed by row number, search disabled.']);
-
-  const outRows = [[...rows[0], 'LanternYears']];
-  const reviewLines = [];
-  const distribution = new Map();
-  const campers = [];
-
-  // Aggregated format-drift signals, reported as loud warnings after the loop.
-  const unparsedSamples = [];
-  const mismatchSamples = [];
-  const implausibleSamples = [];
-  let unparsedTotal = 0;
-  let mismatchTotal = 0;
-  let implausibleTotal = 0;
-  let extraCellRows = 0;
-  let parsedLineTotal = 0;
-
-  for (let r = 1; r < rows.length; r++) {
-    const row = rows[r];
-    const result = processHistory(row[colIdx]);
-
-    // pad ragged rows so LanternYears always lands in the same column
-    const padded = [...row];
-    while (padded.length < header.length) padded.push('');
-    padded.push(String(result.count));
-    outRows.push(padded);
-
-    const rowNum = r + 1; // matches Excel: header is row 1, data starts at 2
-    const first = firstIdx !== -1 ? (row[firstIdx] ?? '').trim() : '';
-    const last = lastIdx !== -1 ? (row[lastIdx] ?? '').trim() : '';
-    const name = [first, last].filter(Boolean).join(' ');
-    const label = name ? `Row ${rowNum} — ${name}` : `Row ${rowNum}`;
-
-    campers.push({
-      rowNum, name, first, last,
-      count: result.count, years: result.years,
-      entries: result.entries, unparsed: result.unparsed,
-    });
-    distribution.set(result.count, (distribution.get(result.count) || 0) + 1);
-
-    parsedLineTotal += result.entries.length;
-    if (row.length > header.length) {
-      extraCellRows++;
-      log.push(['warn', `${label}: row has ${row.length} cells but the header has ${header.length}.`]);
-    }
-    const collect = (items, samples, total, logText) => {
-      for (const item of items) {
-        if (samples.length < 5) samples.push(`${label}: ${item}`);
-        log.push(['warn', `${label}: ${logText}: "${item}"`]);
-      }
-      return total + items.length;
-    };
-    unparsedTotal = collect(result.unparsed, unparsedSamples, unparsedTotal, 'ignored line (no M/D/YYYY date)');
-    mismatchTotal = collect(result.yearMismatches, mismatchSamples, mismatchTotal, 'date year and title year disagree');
-    implausibleTotal = collect(result.implausibleYears, implausibleSamples, implausibleTotal, 'implausible year');
-    for (const t of result.reviews) {
-      reviewLines.push(`${label}: ${t}`);
-      log.push(['warn', `${label}: unrecognized title (not counted): "${t}"`]);
-    }
-  }
-
-  // Format-drift warnings. The tool is hardcoded to the current export
-  // format, so anything unexpected gets reported loudly instead of being
-  // silently ignored or miscounted.
-  const warnings = [];
-  const sampleNote = (total, samples) =>
-    total > samples.length ? [...samples, `…and ${total - samples.length} more (see log)`] : samples;
-
-  if (unparsedTotal > 0) {
-    warnings.push({
-      message: `${unparsedTotal} history line${unparsedTotal === 1 ? ' was' : 's were'} IGNORED because ` +
-        `${unparsedTotal === 1 ? 'it' : 'they'} didn't start with a M/D/YYYY date. If the export's date format ` +
-        'changed, counts will be too low.',
-      samples: sampleNote(unparsedTotal, unparsedSamples),
-    });
-  }
-  if (mismatchTotal > 0) {
-    warnings.push({
-      message: `${mismatchTotal} line${mismatchTotal === 1 ? '' : 's'} where the date's year and the title's year ` +
-        'disagree. This tool trusts the date, but that assumption held until now — verify which one is right.',
-      samples: sampleNote(mismatchTotal, mismatchSamples),
-    });
-  }
-  if (implausibleTotal > 0) {
-    warnings.push({
-      message: `${implausibleTotal} line${implausibleTotal === 1 ? '' : 's'} with an implausible year ` +
-        `(before 1990 or after ${new Date().getFullYear() + 1}). The date format may have changed.`,
-      samples: sampleNote(implausibleTotal, implausibleSamples),
-    });
-  }
-  if (extraCellRows > 0) {
-    warnings.push({
-      message: `${extraCellRows} row${extraCellRows === 1 ? ' has' : 's have'} more columns than the header. ` +
-        'The CSV may be malformed — the LanternYears column may not line up on those rows.',
-      samples: [],
-    });
-  }
-  const zeroCount = distribution.get(0) || 0;
-  const camperCount = rows.length - 1;
-  if (camperCount >= 10 && zeroCount / camperCount > 0.5) {
-    warnings.push({
-      message: `${zeroCount} of ${camperCount} campers (${Math.round(100 * zeroCount / camperCount)}%) have zero ` +
-        'valid summers. That is unusually high — session titles or the file format may have changed, ' +
-        'and valid registrations may no longer be recognized.',
-      samples: [],
-    });
-  }
-  if (parsedLineTotal === 0 && camperCount > 0) {
-    warnings.push({
-      message: 'No registration lines could be parsed in the entire file. This is almost certainly the wrong ' +
-        'file or a changed export format — do not trust these counts.',
-      samples: [],
-    });
-  }
-
-  const lanternCount = campers.filter(c => c.count >= LANTERN_THRESHOLD).length;
-  log.push(['info', `Done: ${lanternCount} lantern-eligible campers out of ${camperCount}.`]);
-  if (warnings.length === 0 && reviewLines.length === 0) {
-    log.push(['info', 'Data checks passed.']);
-  }
-
-  return {
-    outRows, reviewLines, warnings, distribution, campers, hasNames,
-    camperCount, lanternCount, log,
-  };
-}
-
-// Fuzzy name matching: substring matches score highest (earlier and
-// word-start matches win ties), then in-order subsequence matches.
-function fuzzyScore(query, target) {
-  const q = query.toLowerCase();
-  const t = target.toLowerCase();
-  if (!q || !t) return -1;
-
-  const idx = t.indexOf(q);
-  if (idx !== -1) {
-    const wordStart = idx === 0 || t[idx - 1] === ' ' ? 50 : 0;
-    return 1000 - idx + wordStart;
-  }
-
-  let ti = 0, streak = 0, gaps = 0;
-  for (const ch of q) {
-    const found = t.indexOf(ch, ti);
-    if (found === -1) return -1;
-    if (found === ti && ti > 0) streak += 5; else gaps++;
-    ti = found + 1;
-  }
-  return 200 + streak - gaps * 10 - t.length;
-}
-
-function searchCampers(campers, query) {
-  const q = query.trim();
-  if (!q) return campers;
-  return campers
-    .map(c => {
-      // match against both name orders so "smith jo" and "jo smith" both work
-      const score = Math.max(
-        fuzzyScore(q, `${c.first} ${c.last}`),
-        fuzzyScore(q, `${c.last} ${c.first}`)
-      );
-      return { camper: c, score };
-    })
-    .filter(x => x.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .map(x => x.camper);
-}
-
-// UI wiring
+import { toCSV } from '../../assets/js/csv.js';
+import { LANTERN_THRESHOLD, processRoster, searchCampers } from './lantern-rules.js';
 
 const fileInput = document.getElementById('csvFile');
 const clearBtn = document.getElementById('clearBtn');
@@ -314,6 +13,8 @@ const resizeHandle = document.getElementById('resizeHandle');
 const summaryPanel = document.getElementById('summaryPanel');
 const summaryEl = document.getElementById('summary');
 const downloadBtn = document.getElementById('downloadBtn');
+const printRosterBtn = document.getElementById('printRosterBtn');
+const printRoster = document.getElementById('printRoster');
 const warningsPanel = document.getElementById('warningsPanel');
 const warningsEl = document.getElementById('warnings');
 const resultsPanel = document.getElementById('resultsPanel');
@@ -334,7 +35,7 @@ let resultCSV = null;
 let resultName = 'roster_with_lantern_years.csv';
 let allCampers = [];
 let namesAvailable = false;
-let yearsFilter = null;   // summer count selected by clicking a chart column
+let yearsFilter = null; // summer count selected by clicking a chart column
 let chartSlots = [];
 let chartPlot = null;
 
@@ -347,12 +48,13 @@ fileInput.addEventListener('change', () => {
   reader.readAsText(file);
 });
 
-// Clears all output panels and state; used before each run and by Clear.
 function resetUI() {
   resultCSV = null;
   allCampers = [];
   namesAvailable = false;
   downloadBtn.disabled = true;
+  printRosterBtn.disabled = true;
+  printRoster.innerHTML = '';
   summaryPanel.hidden = true;
   summaryEl.innerHTML = '';
   warningsPanel.hidden = true;
@@ -406,6 +108,7 @@ function run(fileName, text) {
     );
   }
   downloadBtn.disabled = false;
+  printRosterBtn.disabled = result.lanternCount === 0;
 
   if (result.warnings.length) {
     for (const w of result.warnings) {
@@ -457,10 +160,8 @@ function buildStatRow(result) {
   return row;
 }
 
-// Column chart of campers per summer count. Emphasis form: lantern buckets
-// (5+) in the accent, the rest in the de-emphasis gray; a legend carries the
-// distinction, value caps carry the numbers (so no y-axis is needed).
-// Clicking a column filters the results list to that summer count.
+// Column chart of campers per summer count; lantern buckets (5+) use the accent
+// color. Clicking a column filters the results list to that count.
 function buildDistributionChart(distribution) {
   const wrap = el('div', 'chart');
   wrap.appendChild(el('div', 'chart-title', 'Campers by number of valid summers — click a column to filter the results'));
@@ -513,7 +214,7 @@ function buildStatusChip(result) {
 function renderLog(entries) {
   const prefix = { info: '·', warn: '⚠', error: '✘' };
   logEl.textContent = entries.map(([level, text]) => `${prefix[level]} ${text}`).join('\n');
-  logPanel.hidden = false; // panel visible, log text stays collapsed until toggled
+  logPanel.hidden = false; // panel shows; the log text stays collapsed until toggled
 }
 
 function showError(msg) {
@@ -525,8 +226,7 @@ function showError(msg) {
   summaryEl.appendChild(p);
 }
 
-// One expandable row per camper: summary line with name/count/badge,
-// registration-by-registration breakdown inside.
+// An expandable row per camper: summary line plus a per-registration breakdown.
 function camperDetails(c) {
   const isLantern = c.count >= LANTERN_THRESHOLD;
   const det = document.createElement('details');
@@ -568,8 +268,6 @@ function camperDetails(c) {
   return det;
 }
 
-// Bundles a camper's entries into one group per summer, in order of first
-// appearance, so same-year registrations render together.
 function groupEntriesByYear(entries) {
   const order = [];
   const byYear = new Map();
@@ -580,10 +278,8 @@ function groupEntriesByYear(entries) {
   return order.map(year => ({ year, entries: byYear.get(year) }));
 }
 
-// One summer's worth of registrations. When more than one session was
-// registered in the same year, they're visually bracketed together and the
-// entry that actually counts (earliest valid) is marked "counts" — the rest
-// are marked as extra sessions that don't add a second lantern year.
+// One summer's registrations. In a multi-session summer only the earliest valid
+// one counts; it's marked "counts" and the rest are flagged as already covered.
 function yearGroupEl(group) {
   const counts = group.entries.some(e => e.counted);
   const multi = group.entries.length > 1;
@@ -612,8 +308,8 @@ function yearGroupEl(group) {
   return wrap;
 }
 
-// Sorting: by last name, or by lantern years (highest first) with last
-// name breaking ties. Files without name columns fall back to row order.
+// By last name; by lantern years (desc, last name breaks ties); or row order
+// for files without name columns.
 const byLastName = (a, b) =>
   a.last.localeCompare(b.last) || a.first.localeCompare(b.first) || a.rowNum - b.rowNum;
 const byYears = (a, b) => b.count - a.count || byLastName(a, b);
@@ -623,7 +319,6 @@ const SORTS = { name: byLastName, years: byYears, row: byRow };
 
 let sortMode = 'row';
 
-// Applies the chart-column filter and keeps the chart/chip in sync with it.
 function setYearsFilter(years) {
   yearsFilter = years;
   if (chartPlot) chartPlot.classList.toggle('filtered', years !== null);
@@ -644,10 +339,9 @@ function renderResults() {
   if (yearsFilter !== null) list = list.filter(c => c.count === yearsFilter);
 
   const total = list.length;
-  // when searching, relevance picks which results survive the cap; the
-  // chosen sort then orders what's shown
-  const capped = query ? list.slice(0, MAX_SEARCH_RESULTS) : [...list];
-  capped.sort(SORTS[sortMode]);
+  // Sort by the active mode, then cap how many search results are shown.
+  const sorted = [...list].sort(SORTS[sortMode]);
+  const capped = query ? sorted.slice(0, MAX_SEARCH_RESULTS) : sorted;
 
   resultsList.innerHTML = '';
   if (total === 0) {
@@ -711,7 +405,6 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && resultsPanel.classList.contains('fullscreen')) setFullscreen(false);
 });
 
-// Drag the handle under the results list to resize it.
 resizeHandle.addEventListener('pointerdown', e => {
   e.preventDefault();
   const startY = e.clientY;
@@ -739,4 +432,53 @@ downloadBtn.addEventListener('click', () => {
   a.download = resultName;
   a.click();
   URL.revokeObjectURL(url);
+});
+
+// Clean lantern-only roster (last/first name + summers, sorted by last name).
+// The @media print rules in lantern.css hide the app UI and show #printRoster.
+function renderPrintRoster() {
+  const lanterns = allCampers
+    .filter(c => c.count >= LANTERN_THRESHOLD)
+    .sort(byLastName);
+
+  printRoster.innerHTML = '';
+
+  const header = el('div', 'print-header');
+  header.appendChild(el('h1', 'print-title', 'Lantern Roster'));
+  const dateStr = new Date().toLocaleDateString('en-US',
+    { year: 'numeric', month: 'long', day: 'numeric' });
+  header.appendChild(el('p', 'print-meta',
+    `YMCA Camp Colman · ${lanterns.length} lantern${lanterns.length === 1 ? '' : 's'} ` +
+    `(${LANTERN_THRESHOLD}+ summers) · ${dateStr}`));
+  printRoster.appendChild(header);
+
+  const table = el('table', 'print-table');
+  const thead = el('thead');
+  const headRow = el('tr');
+  headRow.append(
+    el('th', null, 'Last name'),
+    el('th', null, 'First name'),
+    el('th', 'col-years', 'Summers')
+  );
+  thead.appendChild(headRow);
+  table.appendChild(thead);
+
+  const tbody = el('tbody');
+  for (const c of lanterns) {
+    const tr = el('tr');
+    tr.append(
+      el('td', null, c.last || '—'),
+      el('td', null, c.first || '—'),
+      el('td', 'col-years', String(c.count))
+    );
+    tbody.appendChild(tr);
+  }
+  table.appendChild(tbody);
+  printRoster.appendChild(table);
+}
+
+printRosterBtn.addEventListener('click', () => {
+  if (printRosterBtn.disabled) return;
+  renderPrintRoster();
+  window.print();
 });

@@ -475,6 +475,9 @@ function renderPrintRoster() {
   }
   table.appendChild(tbody);
   printRoster.appendChild(table);
+
+  printRoster.appendChild(el('p', 'print-note',
+    'Names come from registration records and may differ from the name a camper goes by at camp.'));
 }
 
 printRosterBtn.addEventListener('click', () => {

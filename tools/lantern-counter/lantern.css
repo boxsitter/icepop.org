@@ -219,6 +219,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: var(--space-4);
   margin-bottom: var(--space-2);
 }
@@ -295,6 +296,25 @@ body.no-scroll {
   white-space: nowrap;
   cursor: pointer;
   user-select: none;
+}
+
+.cabin-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  white-space: nowrap;
+  font-size: 0.85rem;
+  color: var(--color-muted);
+}
+
+.cabin-filter select {
+  font-size: 0.85rem;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--color-border-input);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
 }
 
 .filter-chip {
@@ -394,6 +414,17 @@ details.camper summary:hover {
 .result-name {
   font-weight: 600;
   min-width: 12rem;
+}
+
+.result-cabin {
+  flex: none;
+  font-size: 0.8rem;
+  color: var(--color-muted);
+  background: var(--color-surface-soft);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-pill);
+  padding: 0.05rem 0.55rem;
+  white-space: nowrap;
 }
 
 .result-years {
@@ -503,11 +534,30 @@ details.camper.lantern .result-badge {
   font-weight: 600;
 }
 
-.summary-actions {
+.results-actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: var(--space-3);
-  margin-top: var(--space-4);
+}
+
+/* Fullscreen toggle: show the "enter" icon normally, the "exit" icon while
+   the results panel is fullscreen. Both icons are block-level (not reliant on
+   base.css) so the button height is identical in either state. */
+.fs-icon {
+  display: block;
+}
+
+.fs-icon.fs-exit {
+  display: none;
+}
+
+#resultsPanel.fullscreen .fs-icon.fs-enter {
+  display: none;
+}
+
+#resultsPanel.fullscreen .fs-icon.fs-exit {
+  display: block;
 }
 
 .name-note {

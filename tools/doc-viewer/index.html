@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Document Viewer</title>
+<link rel="stylesheet" href="../../assets/css/tokens.css">
+<link rel="stylesheet" href="../../assets/css/base.css">
+<link rel="stylesheet" href="doc-viewer.css">
+</head>
+<body>
+<main class="viewer-main">
+  <p class="back-link"><a href="../../">← All tools</a></p>
+  <h1>Document Viewer</h1>
+  <p class="subtitle">Browse and print camp songs and reference documents. Files come from the
+    <code>docs</code> folder in the project.</p>
+
+  <div class="viewer-layout">
+    <nav class="doc-nav" id="docNav" aria-label="Documents">
+      <p class="muted">Loading documents…</p>
+    </nav>
+
+    <section class="doc-pane">
+      <div class="doc-toolbar">
+        <span class="doc-current" id="docCurrent">Select a document</span>
+        <button id="printBtn" class="btn btn-secondary" type="button" disabled>Print</button>
+      </div>
+      <div class="doc-view" id="docView">
+        <p class="doc-placeholder muted">Choose a document from the list to view it here.</p>
+      </div>
+    </section>
+  </div>
+</main>
+
+<!-- mammoth (classic script) exposes window.mammoth for the module below. -->
+<script src="../../assets/js/vendor/mammoth.browser.min.js"></script>
+<script type="module" src="app.js"></script>
+</body>
+</html>

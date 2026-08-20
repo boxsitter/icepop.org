@@ -118,6 +118,20 @@ pre {
   cursor: not-allowed;
 }
 
+/* Icon-only button: square padding, icon sized via its svg. */
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem 0.5rem;
+}
+
+.btn-icon svg {
+  display: block;
+  width: 18px;
+  height: 18px;
+}
+
 /* Privacy note — a distinct callout stating data never leaves the device.
    Deliberately styled apart from body text; used at the top of every page. */
 .privacy-note {

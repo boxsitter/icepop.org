@@ -13,11 +13,14 @@ hosted on GitHub Pages.
 ## Layout
 
 ```
-index.html              # homepage — card grid of tools
-assets/css/tokens.css   # design tokens (colors, spacing, fonts) — no hardcoded hex anywhere else
-assets/css/base.css     # shared styles: body, main, .panel, .btn/.btn-primary/.btn-secondary
-assets/js/csv.js        # shared ES module: parseCSV, toCSV, csvEscape
-tools/<name>/           # one folder per tool (index.html + app.js + <name>.css)
+index.html                # homepage — card grid of tools
+assets/css/tokens.css     # design tokens (colors, spacing, fonts) — no hardcoded hex anywhere else
+assets/css/base.css       # shared styles: body, main, .panel, .btn/.btn-primary/.btn-secondary, .privacy-note
+assets/js/csv.js          # shared ES module: parseCSV, toCSV, csvEscape
+assets/js/vendor/         # vendored third-party libs (e.g. mammoth.browser.min.js for docx)
+tools/<name>/             # one folder per tool (index.html + app.js + <name>.css)
+docs/                     # documents shown by the Document Viewer (+ generated manifest.json)
+scripts/gen-docs-manifest.py  # regenerates docs/manifest.json from the docs/ tree
 ```
 
 ## Adding a tool
@@ -38,6 +41,20 @@ colors, so every tool stays visually consistent.
 ```
 python3 -m http.server 8000   # from the repo root, then open http://localhost:8000/
 ```
+
+## Document Viewer & docs
+
+`tools/doc-viewer/` shows the files under `docs/`. Because the site is static (no directory
+listing at runtime), navigation is driven by `docs/manifest.json`. **After adding, removing, or
+renaming anything in `docs/`, regenerate it:**
+
+```
+python3 scripts/gen-docs-manifest.py
+```
+
+Supported types: `.pdf` (shown in an iframe) and `.docx` (converted to HTML in the browser by
+the vendored `mammoth.browser.min.js` — no CDN, no build). To bump the library, re-download it
+into `assets/js/vendor/` and note the version.
 
 ## Reference example
 

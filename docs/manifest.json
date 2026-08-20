@@ -1,0 +1,77 @@
+{
+  "generated": "2026-08-17",
+  "tree": [
+    {
+      "type": "folder",
+      "name": "References",
+      "children": [
+        {
+          "type": "file",
+          "name": "Community Building Circles.docx",
+          "path": "References/Community Building Circles.docx",
+          "ext": "docx"
+        },
+        {
+          "type": "file",
+          "name": "Embers.docx",
+          "path": "References/Embers.docx",
+          "ext": "docx"
+        },
+        {
+          "type": "file",
+          "name": "Traditions.docx",
+          "path": "References/Traditions.docx",
+          "ext": "docx"
+        }
+      ]
+    },
+    {
+      "type": "folder",
+      "name": "Songs",
+      "children": [
+        {
+          "type": "file",
+          "name": "Peanut Butter.docx",
+          "path": "Songs/Peanut Butter.docx",
+          "ext": "docx"
+        },
+        {
+          "type": "file",
+          "name": "Pepe.docx",
+          "path": "Songs/Pepe.docx",
+          "ext": "docx"
+        },
+        {
+          "type": "file",
+          "name": "Pizza Man Bodiddly Bop (Ver. 1).docx",
+          "path": "Songs/Pizza Man Bodiddly Bop (Ver. 1).docx",
+          "ext": "docx"
+        },
+        {
+          "type": "file",
+          "name": "Princess Pat.docx",
+          "path": "Songs/Princess Pat.docx",
+          "ext": "docx"
+        },
+        {
+          "type": "file",
+          "name": "Rattlin Bog.docx",
+          "path": "Songs/Rattlin Bog.docx",
+          "ext": "docx"
+        },
+        {
+          "type": "file",
+          "name": "The Y Yell.docx",
+          "path": "Songs/The Y Yell.docx",
+          "ext": "docx"
+        },
+        {
+          "type": "file",
+          "name": "We Come From The Mountain.docx",
+          "path": "Songs/We Come From The Mountain.docx",
+          "ext": "docx"
+        }
+      ]
+    }
+  ]
+}

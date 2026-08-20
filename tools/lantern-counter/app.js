@@ -20,6 +20,8 @@ const warningsEl = document.getElementById('warnings');
 const resultsPanel = document.getElementById('resultsPanel');
 const searchBox = document.getElementById('searchBox');
 const lanternsOnlyBox = document.getElementById('lanternsOnly');
+const cabinSelect = document.getElementById('cabinSelect');
+const cabinFilterLabel = document.getElementById('cabinFilterLabel');
 const yearsFilterChip = document.getElementById('yearsFilterChip');
 const resultsCount = document.getElementById('resultsCount');
 const resultsList = document.getElementById('resultsList');
@@ -35,7 +37,9 @@ let resultCSV = null;
 let resultName = 'roster_with_lantern_years.csv';
 let allCampers = [];
 let namesAvailable = false;
+let cabinsAvailable = false;
 let yearsFilter = null; // summer count selected by clicking a chart column
+let cabinFilter = '';   // selected cabin ('' = all cabins)
 let chartSlots = [];
 let chartPlot = null;
 
@@ -52,6 +56,7 @@ function resetUI() {
   resultCSV = null;
   allCampers = [];
   namesAvailable = false;
+  cabinsAvailable = false;
   downloadBtn.disabled = true;
   printRosterBtn.disabled = true;
   printRoster.innerHTML = '';
@@ -62,6 +67,9 @@ function resetUI() {
   resultsPanel.hidden = true;
   searchBox.value = '';
   lanternsOnlyBox.checked = false;
+  cabinFilter = '';
+  cabinSelect.innerHTML = '<option value="">All</option>';
+  cabinFilterLabel.hidden = true;
   resultsList.innerHTML = '';
   reviewPanel.hidden = true;
   logPanel.hidden = true;
@@ -95,6 +103,8 @@ function run(fileName, text) {
   resultName = fileName.replace(/\.csv$/i, '') + '_with_lantern_years.csv';
   allCampers = result.campers;
   namesAvailable = result.hasNames;
+  cabinsAvailable = result.hasCabin;
+  populateCabinFilter();
 
   summaryEl.innerHTML = '';
   summaryEl.append(
@@ -244,7 +254,12 @@ function camperDetails(c) {
   const badge = document.createElement('span');
   badge.className = 'result-badge';
   badge.textContent = isLantern ? '🏮 Lantern' : `row ${c.rowNum}`;
-  sum.append(name, years, badge);
+
+  sum.appendChild(name);
+  if (cabinsAvailable && c.cabin) {
+    sum.appendChild(el('span', 'result-cabin', c.cabin));
+  }
+  sum.append(years, badge);
   det.appendChild(sum);
 
   const body = document.createElement('div');
@@ -332,11 +347,34 @@ function setYearsFilter(years) {
   renderResults();
 }
 
+// Fills the cabin dropdown with the distinct cabins in this file. Hidden when
+// the file has no Cabin column (or the column is present but empty).
+function populateCabinFilter() {
+  cabinFilter = '';
+  cabinSelect.value = '';
+  if (!cabinsAvailable) { cabinFilterLabel.hidden = true; return; }
+
+  const cabins = [...new Set(allCampers.map(c => c.cabin).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+
+  cabinSelect.innerHTML = '';
+  const all = el('option', null, 'All');
+  all.value = '';
+  cabinSelect.appendChild(all);
+  for (const cab of cabins) {
+    const opt = el('option', null, cab);
+    opt.value = cab;
+    cabinSelect.appendChild(opt);
+  }
+  cabinFilterLabel.hidden = cabins.length === 0;
+}
+
 function renderResults() {
   const query = namesAvailable ? searchBox.value.trim() : '';
   let list = searchCampers(allCampers, query);
   if (lanternsOnlyBox.checked) list = list.filter(c => c.count >= LANTERN_THRESHOLD);
   if (yearsFilter !== null) list = list.filter(c => c.count === yearsFilter);
+  if (cabinFilter) list = list.filter(c => c.cabin === cabinFilter);
 
   const total = list.length;
   // Sort by the active mode, then cap how many search results are shown.
@@ -361,6 +399,7 @@ function renderResults() {
 
 searchBox.addEventListener('input', renderResults);
 lanternsOnlyBox.addEventListener('change', renderResults);
+cabinSelect.addEventListener('change', () => { cabinFilter = cabinSelect.value; renderResults(); });
 yearsFilterChip.addEventListener('click', () => setYearsFilter(null));
 
 const sortButtons = {
@@ -395,7 +434,9 @@ clearBtn.addEventListener('click', () => {
 function setFullscreen(on) {
   resultsPanel.classList.toggle('fullscreen', on);
   document.body.classList.toggle('no-scroll', on);
-  fullscreenBtn.textContent = on ? 'Exit fullscreen' : 'Fullscreen';
+  // The icon swap is handled by CSS; keep the accessible label in sync.
+  fullscreenBtn.setAttribute('aria-label', on ? 'Exit fullscreen' : 'Enter fullscreen');
+  fullscreenBtn.title = on ? 'Exit fullscreen' : 'Fullscreen';
 }
 
 fullscreenBtn.addEventListener('click', () =>
@@ -455,22 +496,18 @@ function renderPrintRoster() {
   const table = el('table', 'print-table');
   const thead = el('thead');
   const headRow = el('tr');
-  headRow.append(
-    el('th', null, 'Last name'),
-    el('th', null, 'First name'),
-    el('th', 'col-years', 'Summers')
-  );
+  headRow.append(el('th', null, 'Last name'), el('th', null, 'First name'));
+  if (cabinsAvailable) headRow.appendChild(el('th', null, 'Cabin'));
+  headRow.appendChild(el('th', 'col-years', 'Summers'));
   thead.appendChild(headRow);
   table.appendChild(thead);
 
   const tbody = el('tbody');
   for (const c of lanterns) {
     const tr = el('tr');
-    tr.append(
-      el('td', null, c.last || '—'),
-      el('td', null, c.first || '—'),
-      el('td', 'col-years', String(c.count))
-    );
+    tr.append(el('td', null, c.last || '—'), el('td', null, c.first || '—'));
+    if (cabinsAvailable) tr.appendChild(el('td', null, c.cabin || '—'));
+    tr.appendChild(el('td', 'col-years', String(c.count)));
     tbody.appendChild(tr);
   }
   table.appendChild(tbody);

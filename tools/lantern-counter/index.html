@@ -33,10 +33,6 @@
   <section class="panel" id="summaryPanel" hidden>
     <h2>Summary</h2>
     <div id="summary"></div>
-    <div class="summary-actions">
-      <button id="downloadBtn" class="btn btn-primary" type="button" disabled>Download result CSV</button>
-      <button id="printRosterBtn" class="btn btn-primary" type="button" disabled>Print lantern roster</button>
-    </div>
   </section>
 
   <section class="panel" id="warningsPanel" hidden>
@@ -49,12 +45,26 @@
   <section class="panel" id="resultsPanel" hidden>
     <div class="results-header">
       <h2>Results</h2>
-      <button id="fullscreenBtn" class="btn btn-secondary" type="button">Fullscreen</button>
+      <div class="results-actions">
+        <button id="downloadBtn" class="btn btn-secondary btn-icon" type="button" disabled aria-label="Download result CSV" title="Download result CSV">
+          <svg width="18" height="18" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>
+        </button>
+        <button id="printRosterBtn" class="btn btn-secondary btn-icon" type="button" disabled aria-label="Print lantern roster" title="Print lantern roster">
+          <svg width="18" height="18" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 9V2h12v7"/><rect x="6" y="14" width="12" height="8" rx="1"/></svg>
+        </button>
+        <button id="fullscreenBtn" class="btn btn-secondary btn-icon" type="button" aria-label="Enter fullscreen" title="Fullscreen">
+          <svg class="fs-icon fs-enter" width="18" height="18" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+          <svg class="fs-icon fs-exit" width="18" height="18" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></svg>
+        </button>
+      </div>
     </div>
     <p class="name-note muted">Names come from registration records and may differ from the name a camper goes by at camp.</p>
     <div class="results-controls">
       <input type="search" id="searchBox" placeholder="Search campers…" autocomplete="off">
       <label class="lanterns-only"><input type="checkbox" id="lanternsOnly"> Lanterns only</label>
+      <label class="cabin-filter" id="cabinFilterLabel" hidden>Cabin:
+        <select id="cabinSelect"><option value="">All</option></select>
+      </label>
       <button id="yearsFilterChip" type="button" class="filter-chip" title="Clear filter" hidden></button>
       <div class="sort-toggle" role="group" aria-label="Sort by">
         <span class="muted">Sort:</span>

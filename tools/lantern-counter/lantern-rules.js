@@ -126,12 +126,17 @@ export function processRoster(text) {
   const lastIdx = findColumn(header, 'nameLast');
   const hasNames = firstIdx !== -1 || lastIdx !== -1;
 
+  // Cabin is optional; when present it's shown in the roster and printout.
+  const cabinIdx = findColumn(header, 'Cabin');
+  const hasCabin = cabinIdx !== -1;
+
   const log = [];
   log.push(['info', `Parsed ${rows.length - 1} camper row${rows.length === 2 ? '' : 's'} (${header.length} column${header.length === 1 ? '' : 's'}).`]);
   log.push(['info', `Found "ReservationHistory" (column ${colIdx + 1}).`]);
   log.push(hasNames
     ? ['info', 'Name columns: ' + [firstIdx !== -1 && 'nameFirst', lastIdx !== -1 && 'nameLast'].filter(Boolean).join(', ') + '.']
     : ['warn', 'No nameFirst/nameLast columns — campers listed by row number, search disabled.']);
+  if (hasCabin) log.push(['info', `Found "Cabin" (column ${cabinIdx + 1}).`]);
 
   const outRows = [[...rows[0], 'LanternYears']];
   const reviewLines = [];
@@ -161,11 +166,12 @@ export function processRoster(text) {
     const rowNum = r + 1; // matches Excel: header is row 1, data starts at 2
     const first = firstIdx !== -1 ? (row[firstIdx] ?? '').trim() : '';
     const last = lastIdx !== -1 ? (row[lastIdx] ?? '').trim() : '';
+    const cabin = cabinIdx !== -1 ? (row[cabinIdx] ?? '').trim() : '';
     const name = [first, last].filter(Boolean).join(' ');
     const label = name ? `Row ${rowNum} — ${name}` : `Row ${rowNum}`;
 
     campers.push({
-      rowNum, name, first, last,
+      rowNum, name, first, last, cabin,
       count: result.count, years: result.years,
       entries: result.entries, unparsed: result.unparsed,
     });
@@ -250,7 +256,7 @@ export function processRoster(text) {
   }
 
   return {
-    outRows, reviewLines, warnings, distribution, campers, hasNames,
+    outRows, reviewLines, warnings, distribution, campers, hasNames, hasCabin,
     camperCount, lanternCount, log,
   };
 }

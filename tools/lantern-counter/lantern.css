@@ -194,21 +194,6 @@
   color: var(--color-warn);
 }
 
-.log-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
-}
-
-.log-header h2 {
-  margin: 0;
-}
-
-#log:not([hidden]) {
-  margin-top: var(--space-3);
-}
-
 .file-row {
   display: flex;
   align-items: center;

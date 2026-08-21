@@ -27,9 +27,6 @@ const resultsCount = document.getElementById('resultsCount');
 const resultsList = document.getElementById('resultsList');
 const reviewPanel = document.getElementById('reviewPanel');
 const reviewLog = document.getElementById('reviewLog');
-const logPanel = document.getElementById('logPanel');
-const logToggleBtn = document.getElementById('logToggleBtn');
-const logEl = document.getElementById('log');
 
 const MAX_SEARCH_RESULTS = 50;
 
@@ -72,9 +69,6 @@ function resetUI() {
   cabinFilterLabel.hidden = true;
   resultsList.innerHTML = '';
   reviewPanel.hidden = true;
-  logPanel.hidden = true;
-  logEl.hidden = true;
-  logToggleBtn.textContent = 'Show log';
   yearsFilter = null;
   chartSlots = [];
   chartPlot = null;
@@ -92,7 +86,7 @@ function run(fileName, text) {
     result = processRoster(text);
   } catch (err) {
     showError(err.message);
-    renderLog([
+    logToConsole([
       ['info', `Loaded "${fileName}".`],
       ['error', err.message],
     ]);
@@ -146,7 +140,7 @@ function run(fileName, text) {
     reviewPanel.hidden = false;
   }
 
-  renderLog([['info', `Loaded "${fileName}".`], ...result.log]);
+  logToConsole([['info', `Loaded "${fileName}".`], ...result.log]);
 }
 
 function el(tag, className, text) {
@@ -221,10 +215,11 @@ function buildStatusChip(result) {
   return chip;
 }
 
-function renderLog(entries) {
-  const prefix = { info: '·', warn: '⚠', error: '✘' };
-  logEl.textContent = entries.map(([level, text]) => `${prefix[level]} ${text}`).join('\n');
-  logPanel.hidden = false; // panel shows; the log text stays collapsed until toggled
+// Diagnostics go to the browser dev console, not the UI.
+function logToConsole(entries) {
+  for (const [level, text] of entries) {
+    (console[level] || console.log)(`[lantern-counter] ${text}`);
+  }
 }
 
 function showError(msg) {
@@ -419,11 +414,6 @@ function setSortMode(mode) {
 for (const [mode, btn] of Object.entries(sortButtons)) {
   btn.addEventListener('click', () => setSortMode(mode));
 }
-
-logToggleBtn.addEventListener('click', () => {
-  logEl.hidden = !logEl.hidden;
-  logToggleBtn.textContent = logEl.hidden ? 'Show log' : 'Hide log';
-});
 
 clearBtn.addEventListener('click', () => {
   fileInput.value = '';
